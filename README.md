@@ -1,17 +1,16 @@
-# LINUX-LOG-ANALYZER-AND-BRUTE-FORCE-DETECTOR
 # Linux Log Analyzer & Brute-Force Detector
 
-A beginner cybersecurity project that parses Linux SSH authentication logs to detect brute-force login attempts — built and tested on Kali Linux.
+A beginner cybersecurity project that parses Linux SSH authentication logs to detect brute-force login attempts. Built and tested on Kali Linux.
 
 ## Why I Built This
 
-I wanted to understand how brute-force detection actually works under the hood, rather than just running a prebuilt tool like `fail2ban` and trusting it as a black box. Building this from scratch — reading raw log lines, writing the parsing logic, and hitting real bugs along the way — taught me far more about Linux logging and authentication than just reading about it would have.
+I wanted to actually understand how brute-force detection works instead of just installing `fail2ban` and trusting it blindly. So I built a smaller version myself. Reading raw log lines, writing the parsing logic, and fixing real bugs taught me a lot more than a tutorial would have.
 
 ## What It Does
 
-The script scans `/var/log/auth.log` for failed SSH login attempts, counts how many times each source address fails, flags any address that crosses a configurable threshold, and writes a timestamped report summarizing the results.
+The script scans `/var/log/auth.log` for failed SSH login attempts. It counts how many times each address fails, flags anything that crosses a threshold, and writes a timestamped report.
 
-This mirrors, on a small scale, what real intrusion-detection and log-monitoring tools do in a Security Operations Center (SOC): parse logs → detect patterns → flag suspicious activity → report.
+Basically a tiny, simplified version of what real SOC tooling does: parse logs, spot patterns, flag suspicious activity, report it.
 
 ## How It Works
 
@@ -32,7 +31,7 @@ ip_pattern = re.compile(r"Failed password.*from ([0-9a-fA-F:.]+) port")
 - **Log source:** `/var/log/auth.log` (rsyslog)
 - **Test setup:** a dedicated low-privilege `testuser` account, used to generate realistic failed-login attempts via `ssh testuser@localhost` rather than testing against root
 
-> **Note:** Screenshots referenced below live in a `screenshots/` folder at the repo root — e.g. `screenshots/report-output.png` and `screenshots/auth-log-evidence.png`. Add your own cropped terminal screenshots there with matching filenames (or update the paths below) before pushing.
+> **Note:** Screenshots referenced below live in a `screenshots/` folder at the repo root. Add your own cropped terminal screenshots there with matching filenames (`report-output.png`, `auth-log-evidence.png`), or update the paths if you name them differently.
 
 ## Sample Output
 
@@ -98,19 +97,23 @@ ssh testuser@localhost
 
 ## Lessons Learned / Challenges Faced
 
-The most interesting bug I hit: my first version of the regex only matched IPv4 addresses (`\d+\.\d+\.\d+\.\d+`). When I ran the script, `grep` on the raw log clearly showed 10 matching "Failed password" lines, but my script reported 0 every time. After comparing the raw log output line-by-line against what the script was supposed to match, I found the cause — I was testing via `ssh testuser@localhost`, which connects over the IPv6 loopback address `::1`, not an IPv4 address. My regex simply had no way to match that format, so every line silently failed to parse.
-
-The fix was updating the pattern to accept both IPv4 and IPv6-style addresses:
+Here's the bug that actually taught me something. My first regex only matched IPv4 addresses:
 
 ```python
-# Before (IPv4 only - silently matched nothing for local/IPv6 traffic)
 ip_pattern = re.compile(r"Failed password.*from (\d+\.\d+\.\d+\.\d+)")
+```
 
-# After (matches IPv4 and IPv6)
+I ran the script and got 0 failed attempts. But `grep "Failed password" /var/log/auth.log | wc -l` showed 10 matches on the exact same file. So the log had the data, but my script wasn't seeing it.
+
+Took me a while to catch it: I was testing with `ssh testuser@localhost`, which connects over `::1`, the IPv6 loopback address. Not IPv4. My regex had no way to match that, so every single line quietly failed to parse, with no error, no warning, just an empty counter.
+
+Fixed it by loosening the pattern to accept both formats:
+
+```python
 ip_pattern = re.compile(r"Failed password.*from ([0-9a-fA-F:.]+) port")
 ```
 
-This taught me a real lesson about not assuming log data will always match the "clean" format you expect, and about verifying a script's output against raw ground-truth data (`grep`/`wc -l`) rather than trusting the script blindly.
+Ran it again, got the correct count. Lesson: don't trust that a script is broken (or working) just by looking at its output. Compare it against the raw data with something simple like `grep` first.
 
 ## Future Improvements
 
@@ -123,4 +126,4 @@ This taught me a real lesson about not assuming log data will always match the "
 
 ## Disclaimer
 
-This project was tested only against my own local machine and accounts. Any brute-force simulation (manual or via tools like `hydra`) was run exclusively against `localhost`/my own lab environment. Never run login attack tools against systems you do not own or do not have explicit written authorization to test.
+Everything here was tested only against my own machine and accounts. Any brute-force testing (manual or with tools like `hydra`) was run against `localhost` in my own lab setup only. Don't point login-attack tools at anything you don't own or don't have explicit permission to test.

@@ -31,13 +31,11 @@ ip_pattern = re.compile(r"Failed password.*from ([0-9a-fA-F:.]+) port")
 - **Log source:** `/var/log/auth.log` (rsyslog)
 - **Test setup:** a dedicated low-privilege `testuser` account, used to generate realistic failed-login attempts via `ssh testuser@localhost` rather than testing against root
 
-> **Note:** Screenshots referenced below live in a `screenshots/` folder at the repo root. Add your own cropped terminal screenshots there with matching filenames (`report-output.png`, `auth-log-evidence.png`), or update the paths if you name them differently.
-
 ## Sample Output
 
 Real report generated from an actual test run against my own machine:
 
-![Terminal output of generated report](screenshots/report-output.png)
+![Terminal output of generated report](Screenshots/report-output.png)
 
 ```
 === Linux Auth Log Report ===
@@ -54,7 +52,7 @@ Flagged IPs (>= threshold):
 
 Corresponding raw log evidence from `/var/log/auth.log`:
 
-![Failed password entries in auth.log](screenshots/auth-log-evidence.png)
+![Failed password entries in auth.log](Screenshots/auth-log-evidence.png)
 
 ```
 sshd-session[59525]: Failed password for testuser from ::1 port 56824 ssh2
@@ -68,8 +66,8 @@ sshd-session[59525]: PAM 2 more authentication failures; ... user=testuser
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/log-analyzer.git
-cd log-analyzer
+git clone https://github.com/TevinKaranja/LINUX-LOG-ANALYZER-AND-BRUTE-FORCE-DETECTOR.git
+cd LINUX-LOG-ANALYZER-AND-BRUTE-FORCE-DETECTOR
 
 # Make the script executable
 chmod +x log_analyzer.py
